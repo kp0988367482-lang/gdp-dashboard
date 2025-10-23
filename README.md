@@ -1,19 +1,19 @@
-# :earth_americas: GDP dashboard template
+# 🌍 GHG Emission Dashboard (Streamlit)
 
-A simple Streamlit app showing the GDP of different countries in the world.
+A simple, production-ready **Sustainability-style** Streamlit app to visualize **greenhouse gas (GHG) emissions** with KPI cards, filters (Year/Region/Facility/Scenario), and charts for **Emissions, Usage, and Carbon Intensity**.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gdp-dashboard-template.streamlit.app/)
+---
 
-### How to run it on your own machine
+## ✨ Features
+- Auto-detects common column names (Year, Region, Facility, Scenario, Usage, Scope1/2/3).
+- KPI cards: Total Emissions, Scope 1/2/3, Carbon Intensity.
+- Charts:
+  - Total Emissions (by Year or Facility)
+  - Usage (energy/resource)
+  - Carbon Intensity (by Year or Scenario)
+- Works locally, in GitHub Codespaces, and Streamlit Community Cloud.
 
-1. Install the requirements
+---
 
-   ```
-   $ pip install -r requirements.txt
-   ```
-
-2. Run the app
-
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+## 📦 Requirements
+See `requirements.txt`:
