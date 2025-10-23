@@ -1,29 +1,30 @@
-name: CI - Streamlit syntax check
+name: ✅ Verify & Build GHG Streamlit App
+
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  check:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install deps
+      - name: 📦 Install dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install streamlit
+          pip install streamlit pandas altair numpy
 
-      # 간단 파싱/실행 체크 (선택)
-      - name: Smoke run Streamlit (headless)
+      - name: 🧪 Run Streamlit syntax check
         run: |
-          streamlit run streamlit_app.py --server.headless true &
-          sleep 10
-          pkill -f streamlit || true
+          echo "✅ Checking Streamlit syntax..."
+          python -m py_compile streamlit_app.py
