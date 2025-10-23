@@ -2,9 +2,11 @@ name: Deploy Streamlit App
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
@@ -26,7 +28,7 @@ jobs:
 
       - name: Run Streamlit app (for verification)
         run: |
-          streamlit run streamlit_app.py --server.headless true &
+          nohup streamlit run streamlit_app.py --server.headless true --server.enableCORS false --server.enableXsrfProtection false &
           sleep 10
           echo "✅ Streamlit app launched successfully for build check"
 
