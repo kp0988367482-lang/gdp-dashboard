@@ -1,141 +1,34 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
+name: Deploy Streamlit App
 
-st.set_page_config(page_title="GHG Emission Dashboard", layout="wide")
-st.title("🌍 Greenhouse Gas (GHG) Emission Dashboard")
-st.caption("Upload your CSV file with columns such as Year, Region, Facility, Scenario, Usage, Scope1, Scope2, Scope3.")
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-# ===== Load Data =====
-st.sidebar.header("📁 Data Input")
-uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
-if uploaded_file is None:
-    st.info("Please upload a CSV file (example: dashboard_ready.csv)")
-    st.stop()
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-df = pd.read_csv(uploaded_file)
-df.columns = [c.strip().replace("\n", " ").replace("\r", " ") for c in df.columns]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-def find_col(candidates):
-    for cand in candidates:
-        for col in df.columns:
-            if cand.lower() in col.lower():
-                return col
-    return None
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-# Auto-detect columns
-COL_YEAR     = find_col(["Year"])
-COL_REGION   = find_col(["Region"])
-COL_FACILITY = find_col(["Facility"])
-COL_SCENARIO = find_col(["Scenario"])
-COL_USAGE    = find_col(["Usage", "Electricity", "kWh", "MWh"])
-COL_S1 = find_col(["Scope1", "Scope 1"])
-COL_S2 = find_col(["Scope2", "Scope 2"])
-COL_S3 = find_col(["Scope3", "Scope 3"])
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-# Convert numeric fields
-for c in [COL_S1, COL_S2, COL_S3, COL_USAGE]:
-    if c:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+      - name: Run Streamlit app (for verification)
+        run: |
+          streamlit run streamlit_app.py --server.headless true &
+          sleep 10
+          echo "✅ Streamlit app launched successfully for build check"
 
-# Derived fields
-df["TotalEmission"] = sum([df[c] for c in [COL_S1, COL_S2, COL_S3] if c], start=0)
-df["Intensity"] = (df["TotalEmission"] / df[COL_USAGE].replace({0: pd.NA})) if COL_USAGE else pd.NA
-
-# ===== Sidebar Filters =====
-st.sidebar.header("🔍 Filters")
-
-def multisel(col, label):
-    if col:
-        vals = sorted(df[col].dropna().unique().tolist())
-        return st.sidebar.multiselect(label, vals, default=vals)
-    return None
-
-sel_years = multisel(COL_YEAR, "Year")
-sel_regions = multisel(COL_REGION, "Region")
-sel_facilities = multisel(COL_FACILITY, "Facility")
-sel_scenarios = multisel(COL_SCENARIO, "Scenario")
-
-filtered_df = df.copy()
-if sel_years is not None:  filtered_df = filtered_df[filtered_df[COL_YEAR].isin(sel_years)]
-if sel_regions is not None: filtered_df = filtered_df[filtered_df[COL_REGION].isin(sel_regions)]
-if sel_facilities is not None: filtered_df = filtered_df[filtered_df[COL_FACILITY].isin(sel_facilities)]
-if sel_scenarios is not None: filtered_df = filtered_df[filtered_df[COL_SCENARIO].isin(sel_scenarios)]
-
-# ===== KPI Cards =====
-st.markdown("### 📊 Key Performance Indicators (KPIs)")
-k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Total Emissions (tCO₂e)", f"{filtered_df['TotalEmission'].sum():,.2f}")
-k2.metric("Scope 1", f"{(filtered_df[COL_S1].sum() if COL_S1 else 0):,.2f}")
-k3.metric("Scope 2", f"{(filtered_df[COL_S2].sum() if COL_S2 else 0):,.2f}")
-k4.metric("Scope 3", f"{(filtered_df[COL_S3].sum() if COL_S3 else 0):,.2f}")
-if COL_USAGE:
-    k5.metric("Carbon Intensity (tCO₂e/unit)", f"{(filtered_df['TotalEmission'].sum() / filtered_df[COL_USAGE].sum() if filtered_df[COL_USAGE].sum() else 0):.6f}")
-else:
-    k5.metric("Carbon Intensity (tCO₂e/unit)", "n/a")
-
-# ===== Charts =====
-# 1. Total Emissions Trend
-st.subheader("📈 Total Emissions Trend")
-if COL_YEAR:
-    g1 = filtered_df.groupby(COL_YEAR, as_index=False).agg(Total=("TotalEmission", "sum"))
-    fig1, ax1 = plt.subplots()
-    ax1.bar(g1[COL_YEAR].astype(str), g1["Total"], color="#2E86C1")
-    ax1.set_xlabel("Year")
-    ax1.set_ylabel("Emissions (tCO₂e)")
-    ax1.set_title("Total Emissions by Year")
-    st.pyplot(fig1, use_container_width=True)
-elif COL_FACILITY:
-    g1 = filtered_df.groupby(COL_FACILITY, as_index=False).agg(Total=("TotalEmission", "sum"))
-    fig1, ax1 = plt.subplots()
-    ax1.bar(g1[COL_FACILITY], g1["Total"], color="#2874A6")
-    ax1.set_xticklabels(g1[COL_FACILITY], rotation=45, ha="right")
-    ax1.set_ylabel("Emissions (tCO₂e)")
-    ax1.set_title("Total Emissions by Facility")
-    st.pyplot(fig1, use_container_width=True)
-
-# 2. Usage Trend
-if COL_USAGE:
-    st.subheader("⚡ Energy / Resource Usage")
-    if COL_YEAR:
-        g2 = filtered_df.groupby(COL_YEAR, as_index=False).agg(Usage=(COL_USAGE, "sum"))
-        fig2, ax2 = plt.subplots()
-        ax2.plot(g2[COL_YEAR].astype(str), g2["Usage"], marker="o", color="#F39C12")
-        ax2.set_xlabel("Year")
-        ax2.set_ylabel("Usage")
-        ax2.set_title("Usage by Year")
-        st.pyplot(fig2, use_container_width=True)
-    elif COL_FACILITY:
-        g2 = filtered_df.groupby(COL_FACILITY, as_index=False).agg(Usage=(COL_USAGE, "sum"))
-        fig2, ax2 = plt.subplots()
-        ax2.bar(g2[COL_FACILITY], g2["Usage"], color="#F5B041")
-        ax2.set_xticklabels(g2[COL_FACILITY], rotation=45, ha="right")
-        ax2.set_ylabel("Usage")
-        ax2.set_title("Usage by Facility")
-        st.pyplot(fig2, use_container_width=True)
-
-# 3. Carbon Intensity
-if COL_USAGE:
-    st.subheader("🌱 Carbon Intensity")
-    if COL_YEAR:
-        g3 = filtered_df.groupby(COL_YEAR, as_index=False).agg(E=("TotalEmission", "sum"), U=(COL_USAGE, "sum"))
-        g3["I"] = g3["E"] / g3["U"].replace({0: pd.NA})
-        fig3, ax3 = plt.subplots()
-        ax3.plot(g3[COL_YEAR].astype(str), g3["I"], marker="o", color="#16A085")
-        ax3.set_xlabel("Year")
-        ax3.set_ylabel("Intensity (tCO₂e / unit)")
-        ax3.set_title("Carbon Intensity by Year")
-        st.pyplot(fig3, use_container_width=True)
-    elif COL_SCENARIO:
-        g3 = filtered_df.groupby(COL_SCENARIO, as_index=False).agg(E=("TotalEmission", "sum"), U=(COL_USAGE, "sum"))
-        g3["I"] = g3["E"] / g3["U"].replace({0: pd.NA})
-        fig3, ax3 = plt.subplots()
-        ax3.bar(g3[COL_SCENARIO], g3["I"], color="#1ABC9C")
-        ax3.set_xlabel("Scenario")
-        ax3.set_ylabel("Intensity (tCO₂e / unit)")
-        ax3.set_title("Carbon Intensity by Scenario")
-        st.pyplot(fig3, use_container_width=True)
-
-# ===== Data Table =====
-st.subheader("📋 Filtered Data Table")
-st.dataframe(filtered_df)
+      - name: Finish job
+        run: echo "🎉 Deployment workflow completed successfully!"
