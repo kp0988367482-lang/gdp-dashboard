@@ -1,4 +1,4 @@
-name: 🚀 Deploy GHG Streamlit App
+name: ✅ Verify & Build GHG Streamlit App
 
 on:
   push:
@@ -11,7 +11,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: 🧩 Checkout repository
         uses: actions/checkout@v4
@@ -30,14 +29,3 @@ jobs:
         run: |
           python -m streamlit version
           python -m py_compile streamlit_app.py
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: 🔄 Trigger Streamlit Cloud redeploy
-        run: |
-          echo "Triggering Streamlit Cloud redeploy..."
-          curl -X POST "https://api.streamlit.io/deploy" \
-            -H "Content-Type: application/json" \
-            -d '{"repository": "kp0988367482-lang/gdp-dashboard", "branch": "main", "file": "streamlit_app.py"}'
