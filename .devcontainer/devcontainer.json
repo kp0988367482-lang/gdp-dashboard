@@ -1,34 +1,26 @@
-{
-  "name": "GHG Dashboard DevContainer",
-  "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+name: ✅ Verify & Build GHG Streamlit App
 
-  "customizations": {
-    "codespaces": {
-      "openFiles": [
-        "README.md",
-        "streamlit_app.py"
-      ]
-    },
-    "vscode": {
-      "extensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "ms-toolsai.jupyter",
-        "streetsidesoftware.code-spell-checker"
-      ]
-    }
-  },
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-  "updateContentCommand": "sudo apt update && sudo apt install -y python3-pip && pip install -r requirements.txt",
-  "postAttachCommand": {
-    "server": "streamlit run streamlit_app.py --server.port 8501 --server.enableCORS false --server.enableXsrfProtection false"
-  },
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧩 Checkout repository
+        uses: actions/checkout@v4
 
-  "portsAttributes": {
-    "8501": {
-      "label": "GHG Dashboard",
-      "onAutoForward": "openBrowser"
-    }
-  },
-  "forwardPorts": [8501]
-}
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: ✅ Run Streamlit syntax che
